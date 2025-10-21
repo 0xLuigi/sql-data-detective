@@ -16,8 +16,9 @@ Therefore, I created this simple application 👇 that can find BLOB data and co
 ## 🛠️ Installation & Usage
 
 1. Download here: https://github.com/0xLuigi/sql-data-detective/archive/refs/heads/main.zip
-2. Open the file: Simply open the index.html file in any modern web browser (Chrome, Firefox, Edge).
-3. Load the Database: Drag and drop your .sqlite file onto the upload area.
+2. Unzip the downloaded archive.
+3. Open the file: Simply open the index.html file in any modern web browser (Chrome, Firefox, Edge).
+4. Load the Database: Drag and drop your .sqlite file onto the upload area.
 
 ## 🚀 Technologies
 
