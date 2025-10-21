@@ -1,3 +1,5 @@
+## SQL Data 🕵️‍♂️ Detective
+
 <img src="https://raw.githubusercontent.com/0xLuigi/sql-data-detective/main/images/sqlite.png" alt="SQLite Database Icon" style="width: 800px; height: 500px;">
 
 If you are using the Firefox browser, MetaMask vault data can often be found in .sqlite database files 👆 <br>
