@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Data Detective</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="images/detective-icon.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="sql.js"></script>
+</head>
+<body id="body">
+    <div class="container">
+        <div class="header">
+            <div class="top-controls">
+                <div class="theme-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="darkModeToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="language-selector">
+                    <span id="langLabel" style="color: white; margin-right: 5px;">Language:</span>
+                    <img src="images/us.png" 
+                         alt="USA Flag" 
+                         class="lang-flag" 
+                         onclick="setLanguage('en')"
+                         title="English">
+                    <img src="images/sk.png" 
+                         alt="Slovakia Flag" 
+                         class="lang-flag" 
+                         onclick="setLanguage('sk')"
+                         title="Slovenčina">
+                    <img src="images/it.png" 
+                         alt="Italy Flag" 
+                         class="lang-flag" 
+                         onclick="setLanguage('it')"
+                         title="Italiano">
+                    <img src="images/de.png" 
+                         alt="Germany Flag" 
+                         class="lang-flag" 
+                         onclick="setLanguage('de')"
+                         title="Deutsch">
+                </div>
+            </div>
+            <h1 id="headerTitle">SQL Data Detective</h1>
+            <p id="headerSubtitle">S podporou Blob a pokročilého vyhľadávania</p>
+        </div>
+        
+        <div class="content">
+            <!-- OPRAVENÁ upload sekcia - len JEDNO tlačidlo -->
+            <div class="upload-section" id="uploadSection">
+                <h2 data-i18n="upload_title">📁 Nahraj SQLite databázu</h2>
+                <p style="margin: 15px 0; color: #666;" data-i18n="upload_formats">Podporované formáty: .sqlite, .db, .sql</p>
+                <p style="margin: 10px 0; color: #999; font-size: 0.9em;" data-i18n="upload_info">
+                    Pretiahni súbor sem alebo klikni na tlačidlo
+                </p>
+                <!-- Skrytý file input -->
+                <input type="file" id="fileInput" accept=".sqlite,.db,.sql">
+                <!-- Jedno krásne tlačidlo -->
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()" data-i18n="select_file_btn">
+                    📂 Vybrať súbor
+                </button>
+            </div>
+            
+            <div class="file-info" id="fileInfo"></div>
+            
+            <div id="mainContent" style="display: none;">
+                <div class="stats-panel" id="statsPanel"></div>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('tables')" data-i18n="tab_tables">📊 Tabuľky</button>
+                    <button class="tab" onclick="switchTab('query')" data-i18n="tab_query">💻 SQL Query</button>
+                    <button class="tab" onclick="switchTab('search')" data-i18n="tab_search">🔎 Vyhľadávanie</button>
+                    <button class="tab" onclick="switchTab('blob')" data-i18n="tab_blob">📦 Blob Viewer</button>
+                </div>
+                
+                <div id="tables-content" class="tab-content active">
+                    <h2 data-i18n="tables_title">Dostupné tabuľky</h2>
+                    <div id="tableList" class="table-list"></div>
+                    <div id="tableResults" class="results"></div>
+                    <div id="tablePagination" class="pagination"></div>
+                </div>
+                
+                <div id="query-content" class="tab-content">
+                    <div class="query-section">
+                        <h2 data-i18n="query_title">Spusti vlastný SQL dotaz</h2>
+                        <div class="btn-group" style="margin-bottom: 10px;">
+                            <button class="btn btn-secondary" onclick="insertQueryTemplate('SELECT * FROM table_name LIMIT 100')" data-i18n="query_select_template">SELECT šablóna</button>
+                            <button class="btn btn-secondary" onclick="insertQueryTemplate('SELECT COUNT(*) FROM table_name')" data-i18n="query_count_template">COUNT šablóna</button>
+                            <button class="btn btn-secondary" onclick="insertQueryTemplate('SELECT DISTINCT column FROM table_name')" data-i18n="query_distinct_template">DISTINCT šablóna</button>
+                        </div>
+                        <textarea class="query-input" id="queryInput" placeholder="SELECT * FROM table_name LIMIT 100"></textarea>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="executeQuery()" data-i18n="query_run_btn">▶ Spustiť</button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('queryInput').value=''" data-i18n="query_clear_btn">🗑 Vyčistiť</button>
+                            <button class="btn btn-success" onclick="saveQuery()" data-i18n="query_save_btn">💾 Uložiť query</button>
+                            <button class="btn btn-secondary" onclick="showSavedQueries()" data-i18n="query_saved_btn">📋 Uložené queries</button>
+                        </div>
+                    </div>
+                    <div id="queryResults" class="results"></div>
+                    <div id="queryPagination" class="pagination"></div>
+                </div>
+                
+                <div id="search-content" class="tab-content">
+                    <div class="keyword-search">
+                        <h2 data-i18n="search_title">🔍 Hľadaj kľúčové slová v dátach</h2>
+                        <input type="text" class="keyword-input" id="keywordInput" 
+                               placeholder="Zadaj kľúčové slová oddelené čiarkou (napr: salt, vault, keyring)"
+                               data-i18n-placeholder="search_keyword_placeholder">
+                        <br>
+                        <label>
+                            <input type="checkbox" id="caseSensitive">
+                            <span data-i18n="search_case_sensitive_label">Rozlišovať veľkosť písmen</span>
+                        </label>
+                        <br>
+                        <label>
+                            <input type="checkbox" id="searchInText" checked>
+                            <span data-i18n="search_in_text_label">Hľadať v textových poliach</span>
+                        </label>
+                        <br><br>
+                        <button class="btn btn-primary" onclick="searchKeywords()" data-i18n="search_btn">🔎 Hľadať</button>
+                    </div>
+                    <div id="searchResults" class="results"></div>
+                </div>
+                
+                <div id="blob-content" class="tab-content">
+                    <div class="blob-viewer">
+                        <h2 data-i18n="blob_title">📦 Blob Data Viewer</h2>
+                        <p data-i18n="blob_info">Vyber tabuľku a riadok pre zobrazenie blob dát</p>
+                        <div class="blob-options">
+                            <select id="blobTable" onchange="loadBlobData()">
+                                <option value="" data-i18n="blob_select_default">-- Vyber tabuľku --</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="loadBlobData()" data-i18n="blob_load_btn">Načítať dáta</button>
+                        </div>
+                        <div id="blobResults"></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let db = null;
+        let SQL = null;
+        let currentResults = null;
+        let currentPage = 1;
+        let rowsPerPage = 100;
+        let savedQueries = JSON.parse(localStorage.getItem('savedQueries') || '[]');
+        let currentLang = 'sk';
+        let dbFileName = ''; 
+        let dbFileSizeKB = '';
+        
+        const I18N = {
+            'sk': {
+                headerTitle: 'SQL Data 🕵️‍♂️ Detective',
+                headerSubtitle: 'S podporou Blob a pokročilého vyhľadávania',
+                upload_title: '📁 Nahraj SQLite databázu',
+                upload_formats: 'Podporované formáty: .sqlite, .db, .sql',
+                upload_info: 'Pretiahni súbor sem alebo klikni na tlačidlo',
+                select_file_btn: '📂 Vybrať súbor',
+                file_loaded: '✅ Súbor načítaný:',
+                close_db_btn: '❌ Zavrieť databázu',
+                stats_tables: 'Tabuliek',
+                stats_rows: 'Celkový počet záznamov',
+                stats_size: 'Veľkosť databázy',
+                tab_tables: '📊 Tabuľky',
+                tab_query: '💻 SQL Query',
+                tab_search: '🔎 Vyhľadávanie',
+                tab_blob: '📦 Blob Viewer',
+                tables_title: 'Dostupné tabuľky',
+                query_title: 'Spusti vlastný SQL dotaz',
+                query_select_template: 'SELECT šablóna',
+                query_count_template: 'COUNT šablóna',
+                query_distinct_template: 'DISTINCT šablóna',
+                query_run_btn: '▶ Spustiť',
+                query_clear_btn: '🗑 Vyčistiť',
+                query_save_btn: '💾 Uložiť query',
+                query_saved_btn: '📋 Uložené queries',
+                search_title: '🔍 Hľadaj kľúčové slová v dátach',
+                search_keyword_placeholder: 'Zadaj kľúčové slová oddelené čiarkou (napr: salt, vault, keyring)',
+                search_case_sensitive_label: 'Rozlišovať veľkosť písmen',
+                search_in_text_label: 'Hľadať v textových poliach',
+                search_btn: '🔎 Hľadať',
+                blob_title: '📦 Blob Data Viewer',
+                blob_info: 'Vyber tabuľku a riadok pre zobrazenie blob dát',
+                blob_select_default: '-- Vyber tabuľku --',
+                blob_load_btn: 'Načítať dáta',
+                alert_db_error: 'Chyba pri načítaní databázy: ',
+                alert_no_query: 'Zadaj SQL dotaz!',
+                prompt_save_query_name: 'Zadaj názov pre tento query:',
+                alert_query_saved: 'Query uložený!',
+                alert_no_saved_queries: 'Žiadne uložené queries!',
+                saved_queries_title: 'Uložené queries',
+                saved_queries_load: 'Načítať',
+                saved_queries_delete: 'Zmazať',
+                confirm_delete_query: 'Naozaj chceš zmazať tento query?',
+                error_sql_query: 'Chyba v SQL dotaze: ',
+                results_blob_button: '📦 Blob',
+                results_null_text: 'NULL',
+                results_count: 'Zobrazených ',
+                results_records: ' záznamov',
+                results_no_results: 'Query vykonaný, žiadne výsledky.',
+                blob_data_title: 'Blob Data',
+                blob_copy: '📋 Kopírovať',
+                blob_download: '💾 Stiahnuť',
+                blob_view_text: '📄 Zobraziť ako text',
+                blob_close: 'Zavrieť',
+                blob_viewed_text: '✅ Zobrazené ako text',
+                alert_text_conversion_error: 'Chyba pri konverzii na text: ',
+                alert_no_keywords: 'Zadaj aspoň jedno kľúčové slovo!',
+                search_loading: 'Hľadám...',
+                search_results_found: 'Nájdených ',
+                search_results_count: ' výsledkov',
+                search_table: 'Tabuľka',
+                search_row: 'Riadok',
+                search_column: 'Stĺpec',
+                search_keyword: 'Kľúčové slovo:',
+                search_preview: 'Náhľad:',
+                search_show_full: '📄 Zobraziť celý riadok',
+                search_no_results: 'Žiadne výsledky nenájdené',
+                search_error: 'Chyba pri vyhľadávaní: ',
+                full_text_title: 'Detail riadku',
+                alert_no_tables: 'Žiadne tabuľky',
+                alert_copy_success: 'Skopírované do schránky!',
+                alert_copy_error: 'Chyba pri kopírovaní: ',
+                alert_no_query_for_export: 'Najprv spusti nejaký dotaz!',
+                confirm_close_db: 'Naozaj chceš zavrieť databázu?',
+                language_label: 'Jazyk:',
+                table_records: ' záznamov',
+                prev_page: '◀ Predchádzajúca',
+                next_page: 'Nasledujúca ▶'
+            },
+            'en': {
+                headerTitle: 'SQL Data 🕵️‍♂️ Detective',
+                headerSubtitle: 'With support for Blob and advanced search',
+                upload_title: '📁 Upload SQLite Database',
+                upload_formats: 'Supported formats: .sqlite, .db, .sql',
+                upload_info: 'Drag and drop file here or click the button',
+                select_file_btn: '📂 Select File',
+                file_loaded: '✅ File Loaded:',
+                close_db_btn: '❌ Close Database',
+                stats_tables: 'Tables',
+                stats_rows: 'Total Records',
+                stats_size: 'Database Size',
+                tab_tables: '📊 Tables',
+                tab_query: '💻 SQL Query',
+                tab_search: '🔎 Search',
+                tab_blob: '📦 Blob Viewer',
+                tables_title: 'Available Tables',
+                query_title: 'Run Custom SQL Query',
+                query_select_template: 'SELECT Template',
+                query_count_template: 'COUNT Template',
+                query_distinct_template: 'DISTINCT Template',
+                query_run_btn: '▶ Run',
+                query_clear_btn: '🗑 Clear',
+                query_save_btn: '💾 Save Query',
+                query_saved_btn: '📋 Saved Queries',
+                search_title: '🔍 Search Keywords in Data',
+                search_keyword_placeholder: 'Enter keywords separated by comma (e.g., salt, vault, keyring)',
+                search_case_sensitive_label: 'Case sensitive',
+                search_in_text_label: 'Search in text fields',
+                search_btn: '🔎 Search',
+                blob_title: '📦 Blob Data Viewer',
+                blob_info: 'Select a table and row to view blob data',
+                blob_select_default: '-- Select Table --',
+                blob_load_btn: 'Load Data',
+                alert_db_error: 'Error loading database: ',
+                alert_no_query: 'Enter an SQL query!',
+                prompt_save_query_name: 'Enter a name for this query:',
+                alert_query_saved: 'Query saved!',
+                alert_no_saved_queries: 'No saved queries!',
+                saved_queries_title: 'Saved Queries',
+                saved_queries_load: 'Load',
+                saved_queries_delete: 'Delete',
+                confirm_delete_query: 'Are you sure you want to delete this query?',
+                error_sql_query: 'Error in SQL query: ',
+                results_blob_button: '📦 Blob',
+                results_null_text: 'NULL',
+                results_count: 'Displayed ',
+                results_records: ' records',
+                results_no_results: 'Query executed, no results.',
+                blob_data_title: 'Blob Data',
+                blob_copy: '📋 Copy',
+                blob_download: '💾 Download',
+                blob_view_text: '📄 View as Text',
+                blob_close: 'Close',
+                blob_viewed_text: '✅ Viewed as Text',
+                alert_text_conversion_error: 'Error converting to text: ',
+                alert_no_keywords: 'Enter at least one keyword!',
+                search_loading: 'Searching...',
+                search_results_found: 'Found ',
+                search_results_count: ' results',
+                search_table: 'Table',
+                search_row: 'Row',
+                search_column: 'Column',
+                search_keyword: 'Keyword:',
+                search_preview: 'Preview:',
+                search_show_full: '📄 Show Full Row',
+                search_no_results: 'No results found',
+                search_error: 'Error during search: ',
+                full_text_title: 'Row Detail',
+                alert_no_tables: 'No tables',
+                alert_copy_success: 'Copied to clipboard!',
+                alert_copy_error: 'Error copying: ',
+                alert_no_query_for_export: 'Please run a query first!',
+                confirm_close_db: 'Are you sure you want to close the database?',
+                language_label: 'Language:',
+                table_records: ' records',
+                prev_page: '◀ Previous',
+                next_page: 'Next ▶'
+            },
+            'it': {
+                headerTitle: 'SQL Data 🕵️‍♂️ Detective',
+                headerSubtitle: 'Con supporto per Blob e ricerca avanzata',
+                upload_title: '📁 Carica Database SQLite',
+                upload_formats: 'Formati supportati: .sqlite, .db, .sql',
+                upload_info: 'Trascina qui il file o clicca il pulsante',
+                select_file_btn: '📂 Seleziona File',
+                file_loaded: '✅ File Caricato:',
+                close_db_btn: '❌ Chiudi Database',
+                stats_tables: 'Tabelle',
+                stats_rows: 'Record Totali',
+                stats_size: 'Dimensione Database',
+                tab_tables: '📊 Tabelle',
+                tab_query: '💻 Query SQL',
+                tab_search: '🔎 Ricerca',
+                tab_blob: '📦 Blob Viewer',
+                tables_title: 'Tabelle Disponibili',
+                query_title: 'Esegui Query SQL Personalizzata',
+                query_select_template: 'Template SELECT',
+                query_count_template: 'Template COUNT',
+                query_distinct_template: 'Template DISTINCT',
+                query_run_btn: '▶ Esegui',
+                query_clear_btn: '🗑 Pulisci',
+                query_save_btn: '💾 Salva Query',
+                query_saved_btn: '📋 Query Salvate',
+                search_title: '🔍 Cerca Parole Chiave nei Dati',
+                search_keyword_placeholder: 'Inserisci parole chiave separate da virgola (es: salt, vault, keyring)',
+                search_case_sensitive_label: 'Distinzione maiuscole/minuscole',
+                search_in_text_label: 'Cerca nei campi di testo',
+                search_btn: '🔎 Cerca',
+                blob_title: '📦 Blob Data Viewer',
+                blob_info: 'Seleziona una tabella e una riga per visualizzare i dati blob',
+                blob_select_default: '-- Seleziona Tabella --',
+                blob_load_btn: 'Carica Dati',
+                alert_db_error: 'Errore durante il caricamento del database: ',
+                alert_no_query: 'Inserisci una query SQL!',
+                prompt_save_query_name: 'Inserisci un nome per questa query:',
+                alert_query_saved: 'Query salvata!',
+                alert_no_saved_queries: 'Nessuna query salvata!',
+                saved_queries_title: 'Query Salvate',
+                saved_queries_load: 'Carica',
+                saved_queries_delete: 'Elimina',
+                confirm_delete_query: 'Sei sicuro di voler eliminare questa query?',
+                error_sql_query: 'Errore nella query SQL: ',
+                results_blob_button: '📦 Blob',
+                results_null_text: 'NULL',
+                results_count: 'Visualizzati ',
+                results_records: ' record',
+                results_no_results: 'Query eseguita, nessun risultato.',
+                blob_data_title: 'Dati Blob',
+                blob_copy: '📋 Copia',
+                blob_download: '💾 Scarica',
+                blob_view_text: '📄 Visualizza come Testo',
+                blob_close: 'Chiudi',
+                blob_viewed_text: '✅ Visualizzato come testo',
+                alert_text_conversion_error: 'Errore conversione in testo: ',
+                alert_no_keywords: 'Inserisci almeno una parola chiave!',
+                search_loading: 'Ricerca in corso...',
+                search_results_found: 'Trovati ',
+                search_results_count: ' risultati',
+                search_table: 'Tabella',
+                search_row: 'Riga',
+                search_column: 'Colonna',
+                search_keyword: 'Parola chiave:',
+                search_preview: 'Anteprima:',
+                search_show_full: '📄 Mostra Riga Completa',
+                search_no_results: 'Nessun risultato trovato',
+                search_error: 'Errore durante la ricerca: ',
+                full_text_title: 'Dettaglio Riga',
+                alert_no_tables: 'Nessuna tabella',
+                alert_copy_success: 'Copiato negli appunti!',
+                alert_copy_error: 'Errore di copia: ',
+                alert_no_query_for_export: 'Eseguire prima una query!',
+                confirm_close_db: 'Sei sicuro di voler chiudere il database?',
+                language_label: 'Lingua:',
+                table_records: ' record',
+                prev_page: '◀ Precedente',
+                next_page: 'Successiva ▶'
+            },
+            'de': {
+                headerTitle: 'SQL Data 🕵️‍♂️ Detective',
+                headerSubtitle: 'Mit Unterstützung für Blob und erweiterte Suche',
+                upload_title: '📁 SQLite-Datenbank hochladen',
+                upload_formats: 'Unterstützte Formate: .sqlite, .db, .sql',
+                upload_info: 'Datei hierher ziehen oder auf die Schaltfläche klicken',
+                select_file_btn: '📂 Datei auswählen',
+                file_loaded: '✅ Datei geladen:',
+                close_db_btn: '❌ Datenbank schließen',
+                stats_tables: 'Tabellen',
+                stats_rows: 'Gesamte Datensätze',
+                stats_size: 'Datenbankgröße',
+                tab_tables: '📊 Tabellen',
+                tab_query: '💻 SQL Abfrage',
+                tab_search: '🔎 Suche',
+                tab_blob: '📦 Blob Viewer',
+                tables_title: 'Verfügbare Tabellen',
+                query_title: 'Benutzerdefinierte SQL-Abfrage ausführen',
+                query_select_template: 'SELECT-Vorlage',
+                query_count_template: 'COUNT-Vorlage',
+                query_distinct_template: 'DISTINCT-Vorlage',
+                query_run_btn: '▶ Ausführen',
+                query_clear_btn: '🗑 Leeren',
+                query_save_btn: '💾 Abfrage speichern',
+                query_saved_btn: '📋 Gespeicherte Abfragen',
+                search_title: '🔍 Schlüsselwörter in Daten suchen',
+                search_keyword_placeholder: 'Schlüsselwörter durch Komma getrennt eingeben (z.B: salt, vault, keyring)',
+                search_case_sensitive_label: 'Groß-/Kleinschreibung beachten',
+                search_in_text_label: 'In Textfeldern suchen',
+                search_btn: '🔎 Suchen',
+                blob_title: '📦 Blob Data Viewer',
+                blob_info: 'Tabelle und Zeile auswählen, um Blob-Daten anzuzeigen',
+                blob_select_default: '-- Tabelle auswählen --',
+                blob_load_btn: 'Daten laden',
+                alert_db_error: 'Fehler beim Laden der Datenbank: ',
+                alert_no_query: 'SQL-Abfrage eingeben!',
+                prompt_save_query_name: 'Namen für diese Abfrage eingeben:',
+                alert_query_saved: 'Abfrage gespeichert!',
+                alert_no_saved_queries: 'Keine gespeicherten Abfragen!',
+                saved_queries_title: 'Gespeicherte Abfragen',
+                saved_queries_load: 'Laden',
+                saved_queries_delete: 'Löschen',
+                confirm_delete_query: 'Sind Sie sicher, dass Sie diese Abfrage löschen möchten?',
+                error_sql_query: 'Fehler in der SQL-Abfrage: ',
+                results_blob_button: '📦 Blob',
+                results_null_text: 'NULL',
+                results_count: 'Anzeige ',
+                results_records: ' Datensätze',
+                results_no_results: 'Abfrage ausgeführt, keine Ergebnisse.',
+                blob_data_title: 'Blob Daten',
+                blob_copy: '📋 Kopieren',
+                blob_download: '💾 Herunterladen',
+                blob_view_text: '📄 Als Text anzeigen',
+                blob_close: 'Schließen',
+                blob_viewed_text: '✅ Als Text angezeigt',
+                alert_text_conversion_error: 'Fehler bei der Textkonvertierung: ',
+                alert_no_keywords: 'Geben Sie mindestens ein Schlüsselwort ein!',
+                search_loading: 'Wird gesucht...',
+                search_results_found: 'Gefunden ',
+                search_results_count: ' Ergebnisse',
+                search_table: 'Tabelle',
+                search_row: 'Zeile',
+                search_column: 'Spalte',
+                search_keyword: 'Schlüsselwort:',
+                search_preview: 'Vorschau:',
+                search_show_full: '📄 Gesamte Zeile anzeigen',
+                search_no_results: 'Keine Ergebnisse gefunden',
+                search_error: 'Fehler bei der Suche: ',
+                full_text_title: 'Zeilendetail',
+                alert_no_tables: 'Keine Tabellen',
+                alert_copy_success: 'In die Zwischenablage kopiert!',
+                alert_copy_error: 'Fehler beim Kopieren: ',
+                alert_no_query_for_export: 'Bitte führen Sie zuerst eine Abfrage aus!',
+                confirm_close_db: 'Sind Sie sicher, dass Sie die Datenbank schließen möchten?',
+                language_label: 'Sprache:',
+                table_records: ' Datensätze',
+                prev_page: '◀ Zurück',
+                next_page: 'Weiter ▶'
+            }
+        };
+
+        // Načítanie preferencie jazyka z LocalStorage
+        if (localStorage.getItem('language')) {
+            currentLang = localStorage.getItem('language');
+        }
+
+        // Načítanie preferencie témy z LocalStorage
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('darkModeToggle').checked = true;
+        }
+
+        // Inicializácia SQL.js - OFFLINE verzia
+       initSqlJs({
+          locateFile: file => `./${file}`
+       }).then(function(sql) {
+       SQL = sql;
+           console.log('SQL.js inicializované offline');
+           translatePage();
+       });
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            translatePage();
+        }
+
+        function translatePage() {
+            const translations = I18N[currentLang];
+
+            document.getElementById('headerTitle').textContent = translations.headerTitle;
+            document.getElementById('headerSubtitle').textContent = translations.headerSubtitle;
+            document.getElementById('langLabel').textContent = translations.language_label;
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[key]) {
+                    el.textContent = translations[key];
+                }
+            });
+
+            const fileInfo = document.getElementById('fileInfo');
+            if (db && dbFileName) {
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `
+                    <strong>${translations.file_loaded}</strong> ${dbFileName} (${dbFileSizeKB} KB)
+                    <button class="btn btn-danger close-db-btn" onclick="closeDatabase()">${translations.close_db_btn}</button>
+                `;
+            } else {
+                 fileInfo.style.display = 'none';
+                 fileInfo.innerHTML = '';
+            }
+
+            if (document.getElementById('statsPanel').children.length > 0 && db) {
+                loadStats();
+            }
+        }
+        
+        // OPRAVENÁ funkcia closeDatabase
+        function closeDatabase() {
+            if (confirm(I18N[currentLang].confirm_close_db)) {
+                if (db) {
+                    db.close();
+                }
+                db = null;
+                dbFileName = '';
+                dbFileSizeKB = '';
+                currentResults = null;
+                
+                // Skrytie hlavného obsahu
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('fileInfo').style.display = 'none';
+                
+                // Zobrazenie upload sekcie s FLEX zobrazením
+                const uploadSection = document.getElementById('uploadSection');
+                uploadSection.style.display = 'flex';
+                
+                // Vyčistenie výsledkov
+                document.getElementById('tableList').innerHTML = '';
+                document.getElementById('tableResults').innerHTML = '';
+                document.getElementById('queryResults').innerHTML = '';
+                document.getElementById('searchResults').innerHTML = '';
+                document.getElementById('blobResults').innerHTML = '';
+                document.getElementById('statsPanel').innerHTML = '';
+                
+                // Reset file input
+                document.getElementById('fileInput').value = '';
+            }
+        }
+
+        // Prepínanie Tmavej/Svetlej témy
+        document.getElementById('darkModeToggle').addEventListener('change', function() {
+            if (this.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'false');
+            }
+        });
+
+        // Drag & Drop funkcionalita
+        const uploadSection = document.getElementById('uploadSection');
+        
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadSection.classList.add('drag-over');
+        });
+        
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadSection.classList.remove('drag-over');
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadSection.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+
+            dbFileName = file.name;
+            dbFileSizeKB = (file.size / 1024).toFixed(2);
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const uInt8Array = new Uint8Array(e.target.result);
+                    db = new SQL.Database(uInt8Array);
+                    
+                    translatePage(); 
+                    
+                    document.getElementById('uploadSection').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    loadTables();
+                    loadStats();
+                    switchTab('tables');
+                } catch (err) {
+                    alert(I18N[currentLang].alert_db_error + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadStats() {
+            try {
+                const translations = I18N[currentLang];
+                const query = "SELECT name FROM sqlite_master WHERE type='table'";
+                const result = db.exec(query);
+                
+                const tables = result.length > 0 ? result[0].values.map(r => r[0]) : [];
+                
+                let totalRows = 0;
+                tables.forEach(table => {
+                    if (table.startsWith('sqlite_')) return; 
+                    const countResult = db.exec(`SELECT COUNT(*) FROM "${table}"`);
+                    totalRows += countResult[0].values[0][0];
+                });
+                
+                const dbSize = db.export().length;
+                
+                document.getElementById('statsPanel').innerHTML = `
+                    <div class="stat-card">
+                        <h3>${tables.length}</h3>
+                        <p>${translations.stats_tables}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>${totalRows}</h3>
+                        <p>${translations.stats_rows}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>${(dbSize / 1024).toFixed(2)} KB</h3>
+                        <p>${translations.stats_size}</p>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Chyba pri načítaní štatistík:', err);
+            }
+        }
+
+        function loadTables() {
+            const translations = I18N[currentLang];
+            const query = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
+            const result = db.exec(query);
+            
+            if (result.length === 0 || result[0].values.length === 0) return;
+            
+            const tables = result[0].values.map(row => row[0]).filter(t => !t.startsWith('sqlite_'));
+            const tableList = document.getElementById('tableList');
+            const blobTableSelect = document.getElementById('blobTable');
+            
+            tableList.innerHTML = '';
+            blobTableSelect.innerHTML = `<option value="">${translations.blob_select_default}</option>`;
+            
+            tables.forEach(table => {
+                const div = document.createElement('div');
+                div.className = 'table-item';
+                div.onclick = () => showTableData(table);
+                
+                const countResult = db.exec(`SELECT COUNT(*) FROM "${table}"`);
+                const count = countResult[0].values[0][0];
+                
+                div.innerHTML = `
+                    <h3>${table}</h3>
+                    <p>${count} ${translations.table_records}</p>
+                `;
+                tableList.appendChild(div);
+                
+                const option = document.createElement('option');
+                option.value = table;
+                option.textContent = table;
+                blobTableSelect.appendChild(option);
+            });
+        }
+
+        function showTableData(tableName, page = 1) {
+            try {
+                const offset = (page - 1) * rowsPerPage;
+                const query = `SELECT * FROM "${tableName}" LIMIT ${rowsPerPage} OFFSET ${offset}`;
+                const countQuery = `SELECT COUNT(*) FROM "${tableName}"`;
+                
+                const result = db.exec(query);
+                const countResult = db.exec(countQuery);
+                const totalRows = countResult[0].values[0][0];
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                
+                currentResults = result.length > 0 ? [result[0]] : [];
+                displayResults(result, 'tableResults');
+                displayPagination('tablePagination', totalPages, page, tableName);
+            } catch (err) {
+                document.getElementById('tableResults').innerHTML = 
+                    `<div class="error">${I18N[currentLang].error_sql_query}${err.message}</div>`;
+            }
+        }
+
+        function displayPagination(targetId, totalPages, currentPage, tableName) {
+            const translations = I18N[currentLang];
+            const target = document.getElementById(targetId);
+            if (totalPages <= 1) {
+                target.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="btn-group" style="margin-top: 15px;">';
+            
+            if (currentPage > 1) {
+                html += `<button class="btn btn-secondary" onclick="showTableData('${tableName}', ${currentPage - 1})">${translations.prev_page}</button>`;
+            }
+            
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                html += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'}" onclick="showTableData('${tableName}', ${i})">${i}</button>`;
+            }
+            
+            if (currentPage < totalPages) {
+                html += `<button class="btn btn-secondary" onclick="showTableData('${tableName}', ${currentPage + 1})">${translations.next_page}</button>`;
+            }
+            
+            html += '</div>';
+            target.innerHTML = html;
+        }
+
+        function insertQueryTemplate(template) {
+            document.getElementById('queryInput').value = template;
+        }
+
+        function saveQuery() {
+            const translations = I18N[currentLang];
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                alert(translations.alert_no_query);
+                return;
+            }
+            
+            const name = prompt(translations.prompt_save_query_name);
+            if (name) {
+                savedQueries.push({ name, query, date: new Date().toISOString() });
+                localStorage.setItem('savedQueries', JSON.stringify(savedQueries));
+                alert(translations.alert_query_saved);
+            }
+        }
+
+        function showSavedQueries() {
+            const translations = I18N[currentLang];
+            if (savedQueries.length === 0) {
+                alert(translations.alert_no_saved_queries);
+                return;
+            }
+            
+            let html = '<div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-top:10px;">';
+            html += `<h3>${translations.saved_queries_title}</h3>`;
+            savedQueries.forEach((q, i) => {
+                html += `
+                    <div style="background:white;padding:10px;margin:10px 0;border-radius:5px;border: 1px solid #ddd;">
+                        <strong>${q.name}</strong><br>
+                        <code style="font-size:12px;display:block;margin: 5px 0;overflow: hidden; text-overflow: ellipsis;">${q.query.substring(0, 100)}...</code><br>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="loadSavedQuery(${i})">${translations.saved_queries_load}</button>
+                            <button class="btn btn-danger" onclick="deleteSavedQuery(${i})">${translations.saved_queries_delete}</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            document.getElementById('queryResults').innerHTML = html;
+            
+            if (document.body.classList.contains('dark-mode')) {
+                const darkHtml = html.replace(/background:#f8f9fa/g, 'background:#1f1f1f').replace(/background:white/g, 'background:#121212').replace(/border: 1px solid #ddd/g, 'border: 1px solid #333');
+                document.getElementById('queryResults').innerHTML = darkHtml;
+            }
+        }
+
+        function loadSavedQuery(index) {
+            document.getElementById('queryInput').value = savedQueries[index].query;
+            document.getElementById('queryResults').innerHTML = '';
+        }
+
+        function deleteSavedQuery(index) {
+            if (confirm(I18N[currentLang].confirm_delete_query)) {
+                savedQueries.splice(index, 1);
+                localStorage.setItem('savedQueries', JSON.stringify(savedQueries));
+                showSavedQueries();
+            }
+        }
+
+        function executeQuery() {
+            const translations = I18N[currentLang];
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                alert(translations.alert_no_query);
+                return;
+            }
+            
+            try {
+                const result = db.exec(query);
+                currentResults = result;
+                displayResults(result, 'queryResults');
+            } catch (err) {
+                document.getElementById('queryResults').innerHTML = 
+                    `<div class="error">${translations.error_sql_query}${err.message}</div>`;
+            }
+        }
+
+        function displayResults(result, targetId) {
+            const translations = I18N[currentLang];
+            const target = document.getElementById(targetId);
+            
+            if (!result || result.length === 0 || result[0].values.length === 0) {
+                target.innerHTML = `<div class="success">${translations.results_no_results}</div>`;
+                return;
+            }
+            
+            const data = result[0];
+            let html = '<div class="table-wrapper"><table><thead><tr>';
+            
+            data.columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            data.values.forEach((row, rowIndex) => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    if (cell instanceof Uint8Array) {
+                        html += `<td><button class="btn btn-secondary" onclick="viewBlob(this)" data-blob="${arrayToHex(cell)}">${translations.results_blob_button} (${cell.length} bytes)</button></td>`;
+                    } else {
+                        const cellText = cell !== null ? String(cell) : translations.results_null_text;
+                        const displayText = cellText.length > 100 ? cellText.substring(0, 100) + '...' : cellText;
+                        html += `<td title="${escapeHtml(cellText)}">${escapeHtml(displayText)}</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            html += `<div class="success" style="margin-top:10px;">${translations.results_count}${data.values.length}${translations.results_records}</div>`;
+            target.innerHTML = html;
+        }
+
+        function viewBlob(button) {
+            const translations = I18N[currentLang];
+            const hex = button.getAttribute('data-blob');
+            const bytes = hexToArray(hex);
+            
+            let content = '<div class="blob-viewer">';
+            content += `<h3>${translations.blob_data_title} (${bytes.length} bytes)</h3>`;
+            content += '<div class="btn-group">';
+            content += `<button class="btn btn-secondary" onclick="copyToClipboard(this.closest('.blob-viewer').querySelector('.blob-data').value)">${translations.blob_copy}</button>`;
+            content += `<button class="btn btn-secondary" onclick="downloadBlob(this, '${bytes.length}')">${translations.blob_download}</button>`;
+            content += `<button class="btn btn-secondary" onclick="viewBlobAsText(this)">${translations.blob_view_text}</button>`;
+            content += '</div>';
+            content += `<textarea class="blob-data" rows="18" readonly>${hex}</textarea>`;
+            content += '</div>';
+            
+            const modalHtml = `
+                <div class="modal show" id="blobModal" onclick="closeModal(event, 'blobModal')">
+                    <div class="modal-content large-modal">${content}
+                        <div class="modal-actions">
+                            <button class="btn btn-secondary" onclick="document.getElementById('blobModal').remove()">${translations.blob_close}</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('blobModal');
+            if (existingModal) existingModal.remove();
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function downloadBlob(button, size) {
+            const hex = button.closest('.modal-content').querySelector('.blob-data').value;
+            const bytes = hexToArray(hex);
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `blob_data_${size}_${Date.now()}.bin`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function viewBlobAsText(button) {
+            const translations = I18N[currentLang];
+            const textarea = button.closest('.modal-content').querySelector('.blob-data');
+            const hex = textarea.value;
+            
+            try {
+                const bytes = hexToArray(hex);
+                const text = new TextDecoder('utf-8').decode(bytes);
+                textarea.value = text;
+                button.textContent = translations.blob_viewed_text;
+                button.disabled = true;
+            } catch (e) {
+                alert(translations.alert_text_conversion_error + e.message);
+            }
+        }
+
+        function searchKeywords() {
+            const translations = I18N[currentLang];
+            const keywordsString = document.getElementById('keywordInput').value.trim();
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const searchInText = document.getElementById('searchInText').checked;
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!keywordsString) {
+                alert(translations.alert_no_keywords);
+                return;
+            }
+            
+            resultsDiv.innerHTML = `<div class="info">${translations.search_loading}</div>`;
+            const keywords = keywordsString.split(',').map(k => k.trim()).filter(k => k.length > 0);
+            
+            const searchTerms = keywords.map(k => new RegExp(k, caseSensitive ? 'g' : 'gi'));
+
+            let foundResults = [];
+            const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")[0].values.map(r => r[0]);
+
+            setTimeout(() => {
+                tables.forEach(tableName => {
+                    const data = db.exec(`SELECT * FROM "${tableName}"`);
+                    if (data.length === 0) return;
+
+                    const columns = data[0].columns;
+                    data[0].values.forEach((row, rowIndex) => {
+                        row.forEach((cell, colIndex) => {
+                            let cellValue = cell;
+                            let cellType = typeof cell;
+
+                            if (cell instanceof Uint8Array) {
+                                if (!searchInText) return; 
+                                
+                                try {
+                                    cellValue = new TextDecoder('utf-8').decode(cell);
+                                    cellType = 'text_blob';
+                                } catch (e) {
+                                    return;
+                                }
+                            } else if (cell === null || (cellType !== 'string' && cellType !== 'number')) {
+                                return;
+                            }
+                            
+                            const cellString = String(cellValue);
+                            
+                            searchTerms.forEach(term => {
+                                let match;
+                                while ((match = term.exec(cellString)) !== null) {
+                                    const keyword = match[0];
+                                    const previewStart = Math.max(0, match.index - 50);
+                                    const previewEnd = Math.min(cellString.length, match.index + keyword.length + 50);
+                                    let preview = cellString.substring(previewStart, previewEnd);
+                                    
+                                    const highlightedPreview = escapeHtml(preview).replace(new RegExp(escapeHtml(keyword), 'gi'), `<span class="highlight">${escapeHtml(keyword)}</span>`);
+                                    
+                                    foundResults.push({
+                                        table: tableName,
+                                        row_index: rowIndex,
+                                        column: columns[colIndex],
+                                        keyword: keyword,
+                                        preview: highlightedPreview,
+                                        full_row: row,
+                                        columns: columns,
+                                    });
+                                }
+                            });
+                        });
+                    });
+                });
+                
+                displaySearchResults(foundResults, resultsDiv);
+            }, 10);
+        }
+
+        function displaySearchResults(results, targetDiv) {
+            const translations = I18N[currentLang];
+            targetDiv.innerHTML = '';
+
+            if (results.length === 0) {
+                targetDiv.innerHTML = `<div class="info">${translations.search_no_results}</div>`;
+                return;
+            }
+
+            let html = `<div class="success">${translations.search_results_found}${results.length}${translations.search_results_count}</div>`;
+            
+            results.forEach((r, index) => {
+                html += `
+                    <div class="search-result-item ${index % 2 === 0 ? 'even' : 'odd'}">
+                        <p><strong>${translations.search_table}:</strong> ${r.table} | 
+                           <strong>${translations.search_column}:</strong> ${r.column}
+                        </p>
+                        <p><strong>${translations.search_keyword}:</strong> <span class="highlight">${escapeHtml(r.keyword)}</span></p>
+                        <p><strong>${translations.search_preview}:</strong> ${r.preview}...</p>
+                        <button class="btn btn-secondary btn-sm" onclick="showFullRowDetail(${r.row_index}, '${r.table}')">${translations.search_show_full}</button>
+                    </div>
+                `;
+            });
+            
+            targetDiv.innerHTML += html;
+        }
+
+        function showFullRowDetail(rowIndex, tableName) {
+            const translations = I18N[currentLang];
+            const query = `SELECT * FROM "${tableName}" LIMIT 1 OFFSET ${rowIndex}`;
+            
+            try {
+                const result = db.exec(query);
+                if (result.length === 0 || result[0].values.length === 0) return;
+
+                const columns = result[0].columns;
+                const row = result[0].values[0];
+                
+                let detailHtml = `<h3>${translations.full_text_title}: ${tableName} (Row ${rowIndex})</h3>`;
+                detailHtml += '<div class="table-wrapper"><table class="query-table full-detail-table"><thead><tr><th>Column</th><th>Value</th></tr></thead><tbody>';
+
+                columns.forEach((col, index) => {
+                    const cell = row[index];
+                    let displayValue;
+                    
+                    if (cell instanceof Uint8Array) {
+                        displayValue = `<button class="btn btn-secondary" onclick="viewBlob(this)" data-blob="${arrayToHex(cell)}">${translations.results_blob_button} (${cell.length} bytes)</button>`;
+                    } else {
+                        displayValue = cell !== null ? escapeHtml(String(cell)) : translations.results_null_text;
+                    }
+                    
+                    detailHtml += `<tr><td>${col}</td><td class="detail-value">${displayValue}</td></tr>`;
+                });
+                
+                detailHtml += '</tbody></table></div>';
+
+                const modalHtml = `
+                    <div class="modal show" id="fullRowModal" onclick="closeModal(event, 'fullRowModal')">
+                        <div class="modal-content large-modal">
+                            ${detailHtml}
+                            <div class="modal-actions">
+                                <button class="btn btn-secondary" onclick="document.getElementById('fullRowModal').remove()">${translations.blob_close}</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const existingModal = document.getElementById('fullRowModal');
+                if (existingModal) existingModal.remove();
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            } catch (e) {
+                alert(`${translations.error_sql_query} ${e.message}`);
+            }
+        }
+        
+        function closeModal(event, modalId) {
+            if (event.target.id === modalId) {
+                document.getElementById(modalId).remove();
+            }
+        }
+
+        function arrayToHex(arr) {
+            return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function hexToArray(hex) {
+            const bytes = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+            }
+            return bytes;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyToClipboard(text) {
+            const translations = I18N[currentLang];
+            navigator.clipboard.writeText(text).then(() => {
+                alert(translations.alert_copy_success);
+            }).catch(err => {
+                alert(translations.alert_copy_error + err.message);
+            });
+        }
+
+        function loadBlobData() {
+            const table = document.getElementById('blobTable').value;
+            if (!table) return;
+            
+            try {
+                const result = db.exec(`SELECT * FROM "${table}" LIMIT 50`);
+                displayResults(result, 'blobResults');
+            } catch (err) {
+                document.getElementById('blobResults').innerHTML = 
+                    `<div class="error">${I18N[currentLang].error_sql_query}${err.message}</div>`;
+            }
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(`${tabName}-content`).classList.add('active');
+            document.querySelector(`.tabs button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        }
+    </script>
+</body>
+</html>
