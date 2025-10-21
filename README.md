@@ -24,6 +24,13 @@ Therefore, I created this simple application 👇 that can find BLOB data and co
 - Database Engine: SQL.js (A powerful port of SQLite to WebAssembly, enabling the entire database engine to run securely client-side in the browser.)<br>
 - Security: 100% Client-Side / Offline. Your database file never leaves your computer.
 
+## 🚀 Key Features
+
+- Offline Functionality: Runs completely in the browser using SQL.js (WebAssembly), ensuring data privacy. Your file never leaves your computer.
+- Advanced Search: Search for keywords across all data, including a sophisticated attempt to decode and search within BLOB fields.
+- BLOB Viewer: Dedicated viewer for binary data, supporting Hex view, UTF-8 text conversion, copying, and downloading the raw .bin file.
+- i18n Support: Available in Slovak, English, Italian, and German.
+- UX: Dark/Light mode toggle and saved query management.
 
 ## 💖 Support the Project
 
