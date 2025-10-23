@@ -1,5 +1,13 @@
 ## SQL Data 🕵️‍♂️ Detective
 
+<img src="https://raw.githubusercontent.com/0xLuigi/sql-data-detective/refs/heads/main/images/sql-data-detective.png" alt="SQLite Database Deterctive" style="width: 800px; height: 500px;">
+
+## 🚀 Technologies
+
+- Core: HTML5, CSS3, JavaScript (ES6+)<br>
+- Database Engine: SQL.js (A powerful port of SQLite to WebAssembly, enabling the entire database engine to run securely client-side in the browser.)<br>
+- Security: 100% Client-Side / Offline. Your database file never leaves your computer.
+
 <img src="https://raw.githubusercontent.com/0xLuigi/sql-data-detective/main/images/sqlite.png" alt="SQLite Database Icon" style="width: 800px; height: 500px;">
 
 If you are using the Firefox browser, MetaMask vault data can often be found in .sqlite database files 👆 <br>
@@ -19,12 +27,6 @@ Therefore, I created this simple application 👇 that can find BLOB data and co
 2. Unzip the downloaded archive.
 3. Open the file: Simply open the index.html file in any modern web browser (Chrome, Firefox, Edge).
 4. Load the Database: Drag and drop your .sqlite file onto the upload area.
-
-## 🚀 Technologies
-
-- Core: HTML5, CSS3, JavaScript (ES6+)<br>
-- Database Engine: SQL.js (A powerful port of SQLite to WebAssembly, enabling the entire database engine to run securely client-side in the browser.)<br>
-- Security: 100% Client-Side / Offline. Your database file never leaves your computer.
 
 ## 🔑 Key Features
 
