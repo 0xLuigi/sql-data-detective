@@ -15,7 +15,7 @@
 If you are using the Firefox browser, MetaMask vault data can often be found in .sqlite database files 👆 <br>
 You can open them with a standard text editor or by using a tool like [EmEditor](https://www.emeditor.com) or [Notepad++](https://notepad-plus-plus.org/)<br>
 
-However, sometimes the MetaMask vault data might be incomplete, and you'll need to open the database and find this information in the **Object Data** table, specifically within the BLOB data field.
+However, sometimes the MetaMask vault data might be incomplete (as you can see in the image above), and you'll need to open the database and find this information in the **Object Data** table, specifically within the BLOB data field.
 
 <p>
 Therefore, I created this simple application 👇 that can find BLOB data and convert it into a readable format with a single click.
